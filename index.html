@@ -6,10 +6,7 @@
   <meta name="viewport"
         content="width=device-width, initial-scale=1.0">
 
-  <title>
-    Jointworks Attendance Camera
-  </title>
-
+  <title>Jointworks Attendance Camera</title>
 
   <style>
 
@@ -17,159 +14,86 @@
       box-sizing: border-box;
     }
 
-
     body {
-
       margin: 0;
-
-      background:
-        #111;
-
-      color:
-        white;
-
-      font-family:
-        Arial,
-        sans-serif;
-
-      text-align:
-        center;
-
+      min-height: 100vh;
+      background: #111;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
-
-
-    h2 {
-
-      margin:
-        20px 0 10px;
-
-      font-size:
-        22px;
-
-    }
-
 
     .camera-container {
-
-      width:
-        100%;
-
-      max-width:
-        500px;
-
-      margin:
-        auto;
-
-      padding:
-        10px;
-
+      width: 100%;
+      max-width: 450px;
+      padding: 25px;
     }
 
-
-    video {
-
-      width:
-        100%;
-
-      height:
-        auto;
-
-      max-height:
-        70vh;
-
-      object-fit:
-        cover;
-
-      border-radius:
-        12px;
-
-      background:
-        #000;
-
+    h2 {
+      margin-bottom: 12px;
+      font-size: 22px;
     }
-
-
-    button {
-
-      width:
-        90%;
-
-      max-width:
-        400px;
-
-      padding:
-        16px;
-
-      margin-top:
-        20px;
-
-      border:
-        none;
-
-      border-radius:
-        10px;
-
-      font-size:
-        18px;
-
-      font-weight:
-        bold;
-
-    }
-
-
-    #captureBtn {
-
-      background:
-        white;
-
-      color:
-        black;
-
-    }
-
 
     #status {
-
-      margin-top:
-        15px;
-
-      font-size:
-        15px;
-
-      color:
-        #ccc;
-
+      margin: 20px 0;
+      font-size: 16px;
+      color: #ccc;
     }
 
+    #captureBtn {
+      width: 90%;
+      max-width: 350px;
+      padding: 17px;
+      border: none;
+      border-radius: 10px;
+      background: white;
+      color: black;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #captureBtn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /*
+      IMPORTANT:
+      The video element is completely hidden.
+      The camera is active in the background,
+      but the employee cannot see the live
+      camera image or their face.
+    */
+
+    #video {
+      position: fixed;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      left: -100px;
+      top: -100px;
+    }
+
+    #canvas {
+      display: none;
+    }
 
     #flash {
-
-      position:
-        fixed;
-
-      inset:
-        0;
-
-      background:
-        white;
-
-      opacity:
-        0;
-
-      pointer-events:
-        none;
-
+      position: fixed;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      pointer-events: none;
     }
-
 
     .flash-effect {
-
-      animation:
-        flash 0.25s ease;
-
+      animation: flash 0.25s ease;
     }
-
 
     @keyframes flash {
 
@@ -187,6 +111,14 @@
 
     }
 
+    .success {
+      color: #66bb6a !important;
+    }
+
+    .error {
+      color: #ef5350 !important;
+    }
+
   </style>
 
 </head>
@@ -195,42 +127,47 @@
 <body>
 
 
-<h2>
-  Jointworks Attendance
-</h2>
-
-
 <div class="camera-container">
 
-
-  <video
-    id="video"
-    autoplay
-    playsinline>
-  </video>
-
-
-  <button
-    id="captureBtn">
-
-    CAPTURE PHOTO
-
-  </button>
-
+  <h2>
+    Jointworks Attendance
+  </h2>
 
   <div id="status">
     Starting camera...
   </div>
 
+  <button
+    id="captureBtn"
+    disabled>
+
+    CAPTURE PHOTO
+
+  </button>
 
 </div>
 
 
+<!--
+  Camera stream is active,
+  but the video is NOT visible.
+-->
+
+<video
+  id="video"
+  autoplay
+  playsinline>
+</video>
+
+
+<!-- Hidden canvas used to capture the photo -->
+
 <canvas
-  id="canvas"
-  style="display:none;">
+  id="canvas">
 </canvas>
 
+
+<!-- Flash effect -->
 
 <div id="flash"></div>
 
@@ -242,12 +179,13 @@
  * VARIABLES
  *************************************************/
 
-let stream =
-  null;
+let stream = null;
+
+let cameraReady = false;
 
 
 /*************************************************
- * GET CAMERA TOKEN
+ * GET TOKEN FROM URL
  *************************************************/
 
 const params =
@@ -257,9 +195,7 @@ const params =
 
 
 const token =
-  params.get(
-    'token'
-  );
+  params.get('token');
 
 
 /*************************************************
@@ -297,27 +233,40 @@ const flash =
 
 
 /*************************************************
+ * CHECK CAMERA SESSION
+ *************************************************/
+
+if (!token) {
+
+  status.textContent =
+    'Invalid camera session.';
+
+  status.classList.add(
+    'error'
+  );
+
+} else {
+
+  startCamera();
+
+}
+
+
+/*************************************************
  * START CAMERA
  *************************************************/
 
 async function startCamera() {
 
-
-  if (!token) {
-
-    status.textContent =
-      'Invalid camera session.';
-
-    captureBtn.disabled =
-      true;
-
-    return;
-
-  }
-
-
   try {
 
+    /*
+      Front camera.
+
+      The video stream is NOT displayed.
+      It exists only so we can capture
+      the camera frame.
+    */
 
     stream =
       await navigator
@@ -326,8 +275,9 @@ async function startCamera() {
 
           video: {
 
-            facingMode:
-              'user',
+            facingMode: {
+              ideal: 'user'
+            },
 
             width: {
               ideal: 640
@@ -339,32 +289,92 @@ async function startCamera() {
 
           },
 
-          audio:
-            false
+          audio: false
 
         });
 
+
+    /*
+      Connect camera stream to hidden
+      video element.
+    */
 
     video.srcObject =
       stream;
 
 
-    status.textContent =
-      'Camera is active';
+    /*
+      Wait until camera has enough
+      data for a frame.
+    */
 
+    await new Promise(
+      function(resolve) {
+
+        if (
+          video.readyState >= 2
+        ) {
+
+          resolve();
+
+        } else {
+
+          video.onloadedmetadata =
+            function() {
+
+              resolve();
+
+            };
+
+        }
+
+      }
+    );
+
+
+    /*
+      Make sure video starts.
+    */
+
+    await video.play();
+
+
+    cameraReady =
+      true;
+
+
+    captureBtn.disabled =
+      false;
+
+
+    status.textContent =
+      'Camera ready.';
 
   }
 
-  catch (error) {
 
+  catch (error) {
 
     console.error(
       error
     );
 
 
+    cameraReady =
+      false;
+
+
+    captureBtn.disabled =
+      true;
+
+
     status.textContent =
       'Camera permission was not given.';
+
+
+    status.classList.add(
+      'error'
+    );
 
 
     alert(
@@ -384,160 +394,205 @@ captureBtn.addEventListener(
   'click',
   function() {
 
-
-    if (!stream) {
-
-      alert(
-        'Camera is not ready.'
-      );
-
-      return;
-
-    }
-
-
-    /*********************************************
-     * SET CANVAS SIZE
-     *********************************************/
-
-    canvas.width =
-      video.videoWidth;
-
-
-    canvas.height =
-      video.videoHeight;
-
-
-    /*********************************************
-     * CAPTURE FRAME
-     *********************************************/
-
-    const ctx =
-      canvas.getContext(
-        '2d'
-      );
-
-
-    ctx.drawImage(
-      video,
-      0,
-      0,
-      canvas.width,
-      canvas.height
-    );
-
-
-    /*********************************************
-     * CONVERT TO JPEG
-     *********************************************/
-
-    const photo =
-      canvas.toDataURL(
-        'image/jpeg',
-        0.75
-      );
-
-
-    /*********************************************
-     * FLASH
-     *********************************************/
-
-    flash.classList.remove(
-      'flash-effect'
-    );
-
-
-    void flash.offsetWidth;
-
-
-    flash.classList.add(
-      'flash-effect'
-    );
-
-
-    /*********************************************
-     * STOP CAMERA IMMEDIATELY
-     *********************************************/
-
-    stopCamera();
-
-
-    /*********************************************
-     * HIDE CAMERA
-     *********************************************/
-
-    video.style.display =
-      'none';
-
-
-    captureBtn.style.display =
-      'none';
-
-
-    status.textContent =
-      'Photo captured successfully.';
-
-
-    /*********************************************
-     * SEND PHOTO TO ATTENDANCE PAGE
-     *********************************************/
-
-    if (
-      window.opener &&
-      !window.opener.closed
-    ) {
-
-
-      window.opener.postMessage(
-
-        {
-
-          type:
-            'JOINTWORKS_SELFIE',
-
-          token:
-            token,
-
-          selfieData:
-            photo,
-
-          capturedTime:
-            new Date()
-              .toISOString()
-
-        },
-
-        '*'
-
-      );
-
-
-      /*******************************************
-       * CLOSE CAMERA PAGE
-       *******************************************/
-
-      setTimeout(
-        function() {
-
-          window.close();
-
-        },
-        700
-      );
-
-
-    }
-
-    else {
-
-
-      status.textContent =
-        'Photo captured. Please return to the attendance page.';
-
-    }
+    capturePhoto();
 
   }
 );
+
+
+/*************************************************
+ * CAPTURE PHOTO FUNCTION
+ *************************************************/
+
+function capturePhoto() {
+
+
+  if (
+    !cameraReady ||
+    !stream
+  ) {
+
+    alert(
+      'Camera is not ready yet.'
+    );
+
+    return;
+
+  }
+
+
+  /*
+    Make sure the camera frame has
+    actual dimensions.
+  */
+
+  const width =
+    video.videoWidth;
+
+  const height =
+    video.videoHeight;
+
+
+  if (
+    !width ||
+    !height
+  ) {
+
+    alert(
+      'Camera is still starting. Please try again.'
+    );
+
+    return;
+
+  }
+
+
+  /***********************************************
+   * SET HIDDEN CANVAS SIZE
+   ***********************************************/
+
+  canvas.width =
+    width;
+
+  canvas.height =
+    height;
+
+
+  /***********************************************
+   * CAPTURE CURRENT CAMERA FRAME
+   ***********************************************/
+
+  const ctx =
+    canvas.getContext(
+      '2d'
+    );
+
+
+  ctx.drawImage(
+    video,
+    0,
+    0,
+    width,
+    height
+  );
+
+
+  /***********************************************
+   * CONVERT PHOTO TO JPEG
+   ***********************************************/
+
+  const photo =
+    canvas.toDataURL(
+      'image/jpeg',
+      0.75
+    );
+
+
+  /***********************************************
+   * FLASH EFFECT
+   ***********************************************/
+
+  flash.classList.remove(
+    'flash-effect'
+  );
+
+
+  void flash.offsetWidth;
+
+
+  flash.classList.add(
+    'flash-effect'
+  );
+
+
+  /***********************************************
+   * CAMERA IS NO LONGER NEEDED
+   ***********************************************/
+
+  stopCamera();
+
+
+  cameraReady =
+    false;
+
+
+  captureBtn.disabled =
+    true;
+
+
+  status.textContent =
+    'Photo captured successfully.';
+
+
+  status.classList.remove(
+    'error'
+  );
+
+
+  status.classList.add(
+    'success'
+  );
+
+
+  /***********************************************
+   * SEND PHOTO TO APPS SCRIPT PAGE
+   ***********************************************/
+
+  if (
+    window.opener &&
+    !window.opener.closed
+  ) {
+
+    window.opener.postMessage(
+
+      {
+
+        type:
+          'JOINTWORKS_SELFIE',
+
+        token:
+          token,
+
+        selfieData:
+          photo,
+
+        capturedTime:
+          new Date().toISOString()
+
+      },
+
+      '*'
+
+    );
+
+
+    /*********************************************
+     * CLOSE CAMERA PAGE
+     *********************************************/
+
+    setTimeout(
+      function() {
+
+        window.close();
+
+      },
+      700
+    );
+
+
+  } else {
+
+    /*
+      Fallback if the browser does not
+      allow the camera tab to close.
+    */
+
+    status.textContent =
+      'Photo captured. Please return to the attendance page.';
+
+  }
+
+}
 
 
 /*************************************************
@@ -546,9 +601,7 @@ captureBtn.addEventListener(
 
 function stopCamera() {
 
-
   if (stream) {
-
 
     stream
       .getTracks()
@@ -560,7 +613,6 @@ function stopCamera() {
         }
       );
 
-
     stream =
       null;
 
@@ -571,13 +623,6 @@ function stopCamera() {
     null;
 
 }
-
-
-/*************************************************
- * START CAMERA
- *************************************************/
-
-startCamera();
 
 
 /*************************************************
