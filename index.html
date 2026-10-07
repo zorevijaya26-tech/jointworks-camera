@@ -1,309 +1,602 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jointworks Camera</title>
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+  <title>
+    Jointworks Attendance Camera
+  </title>
+
 
   <style>
+
     * {
       box-sizing: border-box;
     }
 
+
     body {
+
       margin: 0;
-      background: #111;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
+
+      background:
+        #111;
+
+      color:
+        white;
+
+      font-family:
+        Arial,
+        sans-serif;
+
+      text-align:
+        center;
+
     }
+
 
     h2 {
-      margin: 20px 0 10px;
-      font-size: 22px;
+
+      margin:
+        20px 0 10px;
+
+      font-size:
+        22px;
+
     }
+
 
     .camera-container {
-      width: 100%;
-      max-width: 500px;
-      margin: auto;
-      padding: 10px;
+
+      width:
+        100%;
+
+      max-width:
+        500px;
+
+      margin:
+        auto;
+
+      padding:
+        10px;
+
     }
+
 
     video {
-      width: 100%;
-      height: auto;
-      max-height: 70vh;
-      object-fit: cover;
-      border-radius: 12px;
-      background: #000;
+
+      width:
+        100%;
+
+      height:
+        auto;
+
+      max-height:
+        70vh;
+
+      object-fit:
+        cover;
+
+      border-radius:
+        12px;
+
+      background:
+        #000;
+
     }
+
 
     button {
-      width: 90%;
-      max-width: 400px;
-      padding: 16px;
-      margin-top: 20px;
-      border: none;
-      border-radius: 10px;
-      font-size: 18px;
-      font-weight: bold;
-      cursor: pointer;
+
+      width:
+        90%;
+
+      max-width:
+        400px;
+
+      padding:
+        16px;
+
+      margin-top:
+        20px;
+
+      border:
+        none;
+
+      border-radius:
+        10px;
+
+      font-size:
+        18px;
+
+      font-weight:
+        bold;
+
     }
+
 
     #captureBtn {
-      background: white;
-      color: black;
+
+      background:
+        white;
+
+      color:
+        black;
+
     }
+
 
     #status {
-      margin-top: 15px;
-      font-size: 15px;
-      color: #ccc;
+
+      margin-top:
+        15px;
+
+      font-size:
+        15px;
+
+      color:
+        #ccc;
+
     }
+
 
     #flash {
-      position: fixed;
-      inset: 0;
-      background: white;
-      opacity: 0;
-      pointer-events: none;
+
+      position:
+        fixed;
+
+      inset:
+        0;
+
+      background:
+        white;
+
+      opacity:
+        0;
+
+      pointer-events:
+        none;
+
     }
+
 
     .flash-effect {
-      animation: flash 0.25s ease;
+
+      animation:
+        flash 0.25s ease;
+
     }
 
+
     @keyframes flash {
+
       0% {
         opacity: 0;
       }
+
       30% {
         opacity: 1;
       }
+
       100% {
         opacity: 0;
       }
+
     }
+
   </style>
+
 </head>
+
 
 <body>
 
-  <h2>Jointworks Attendance</h2>
 
-  <div class="camera-container">
+<h2>
+  Jointworks Attendance
+</h2>
 
-    <video id="video" autoplay playsinline></video>
 
-    <button id="captureBtn">
-      CAPTURE PHOTO
-    </button>
+<div class="camera-container">
 
-    <div id="status">
-      Camera is active
-    </div>
 
+  <video
+    id="video"
+    autoplay
+    playsinline>
+  </video>
+
+
+  <button
+    id="captureBtn">
+
+    CAPTURE PHOTO
+
+  </button>
+
+
+  <div id="status">
+    Starting camera...
   </div>
 
-  <canvas id="canvas" style="display:none;"></canvas>
 
-  <div id="flash"></div>
-
-  <script>
-
-    let stream = null;
-
-    const video =
-      document.getElementById("video");
-
-    const canvas =
-      document.getElementById("canvas");
-
-    const captureBtn =
-      document.getElementById("captureBtn");
-
-    const status =
-      document.getElementById("status");
-
-    const flash =
-      document.getElementById("flash");
+</div>
 
 
-    // Start camera
-    async function startCamera() {
+<canvas
+  id="canvas"
+  style="display:none;">
+</canvas>
 
-      try {
 
-        stream =
-          await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: "user",
-              width: {
-                ideal: 640
-              },
-              height: {
-                ideal: 480
-              }
+<div id="flash"></div>
+
+
+<script>
+
+
+/*************************************************
+ * VARIABLES
+ *************************************************/
+
+let stream =
+  null;
+
+
+/*************************************************
+ * GET CAMERA TOKEN
+ *************************************************/
+
+const params =
+  new URLSearchParams(
+    window.location.search
+  );
+
+
+const token =
+  params.get(
+    'token'
+  );
+
+
+/*************************************************
+ * PAGE ELEMENTS
+ *************************************************/
+
+const video =
+  document.getElementById(
+    'video'
+  );
+
+
+const canvas =
+  document.getElementById(
+    'canvas'
+  );
+
+
+const captureBtn =
+  document.getElementById(
+    'captureBtn'
+  );
+
+
+const status =
+  document.getElementById(
+    'status'
+  );
+
+
+const flash =
+  document.getElementById(
+    'flash'
+  );
+
+
+/*************************************************
+ * START CAMERA
+ *************************************************/
+
+async function startCamera() {
+
+
+  if (!token) {
+
+    status.textContent =
+      'Invalid camera session.';
+
+    captureBtn.disabled =
+      true;
+
+    return;
+
+  }
+
+
+  try {
+
+
+    stream =
+      await navigator
+        .mediaDevices
+        .getUserMedia({
+
+          video: {
+
+            facingMode:
+              'user',
+
+            width: {
+              ideal: 640
             },
-            audio: false
-          });
 
-        video.srcObject = stream;
-
-        status.textContent =
-          "Camera is active";
-
-      } catch (error) {
-
-        console.error(error);
-
-        status.textContent =
-          "Camera permission was not given.";
-
-        alert(
-          "Please allow camera permission and try again."
-        );
-      }
-    }
-
-
-    // Capture photo
-    captureBtn.addEventListener(
-      "click",
-      function () {
-
-        if (!stream) {
-
-          alert(
-            "Camera is not ready yet."
-          );
-
-          return;
-        }
-
-
-        // Set canvas size
-        canvas.width =
-          video.videoWidth;
-
-        canvas.height =
-          video.videoHeight;
-
-
-        // Capture current camera frame
-        const ctx =
-          canvas.getContext("2d");
-
-        ctx.drawImage(
-          video,
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        );
-
-
-        // Convert photo to JPEG
-        const photo =
-          canvas.toDataURL(
-            "image/jpeg",
-            0.75
-          );
-
-
-        // Flash effect
-        flash.classList.remove(
-          "flash-effect"
-        );
-
-        void flash.offsetWidth;
-
-        flash.classList.add(
-          "flash-effect"
-        );
-
-
-        // Immediately stop camera
-        stopCamera();
-
-
-        status.textContent =
-          "Photo captured successfully.";
-
-
-        // Send photo back to attendance page
-        if (
-          window.opener &&
-          !window.opener.closed
-        ) {
-
-          window.opener.postMessage(
-            {
-              type:
-                "JOINTWORKS_SELFIE",
-              selfieData:
-                photo,
-              capturedTime:
-                new Date().toISOString()
-            },
-            "*"
-          );
-
-          setTimeout(
-            function () {
-
-              window.close();
-
-            },
-            500
-          );
-
-        } else {
-
-          status.textContent =
-            "Photo captured. Please return to the attendance page.";
-
-          captureBtn.style.display =
-            "none";
-        }
-
-      }
-    );
-
-
-    // Stop camera
-    function stopCamera() {
-
-      if (stream) {
-
-        stream
-          .getTracks()
-          .forEach(
-            function(track) {
-              track.stop();
+            height: {
+              ideal: 480
             }
-          );
 
-        stream = null;
-      }
+          },
 
-      video.srcObject = null;
+          audio:
+            false
+
+        });
+
+
+    video.srcObject =
+      stream;
+
+
+    status.textContent =
+      'Camera is active';
+
+
+  }
+
+  catch (error) {
+
+
+    console.error(
+      error
+    );
+
+
+    status.textContent =
+      'Camera permission was not given.';
+
+
+    alert(
+      'Please allow camera permission and try again.'
+    );
+
+  }
+
+}
+
+
+/*************************************************
+ * CAPTURE PHOTO
+ *************************************************/
+
+captureBtn.addEventListener(
+  'click',
+  function() {
+
+
+    if (!stream) {
+
+      alert(
+        'Camera is not ready.'
+      );
+
+      return;
+
     }
 
 
-    // Start automatically
-    startCamera();
+    /*********************************************
+     * SET CANVAS SIZE
+     *********************************************/
+
+    canvas.width =
+      video.videoWidth;
 
 
-    // Stop camera if page is closed
-    window.addEventListener(
-      "beforeunload",
-      function() {
-        stopCamera();
-      }
+    canvas.height =
+      video.videoHeight;
+
+
+    /*********************************************
+     * CAPTURE FRAME
+     *********************************************/
+
+    const ctx =
+      canvas.getContext(
+        '2d'
+      );
+
+
+    ctx.drawImage(
+      video,
+      0,
+      0,
+      canvas.width,
+      canvas.height
     );
 
-  </script>
+
+    /*********************************************
+     * CONVERT TO JPEG
+     *********************************************/
+
+    const photo =
+      canvas.toDataURL(
+        'image/jpeg',
+        0.75
+      );
+
+
+    /*********************************************
+     * FLASH
+     *********************************************/
+
+    flash.classList.remove(
+      'flash-effect'
+    );
+
+
+    void flash.offsetWidth;
+
+
+    flash.classList.add(
+      'flash-effect'
+    );
+
+
+    /*********************************************
+     * STOP CAMERA IMMEDIATELY
+     *********************************************/
+
+    stopCamera();
+
+
+    /*********************************************
+     * HIDE CAMERA
+     *********************************************/
+
+    video.style.display =
+      'none';
+
+
+    captureBtn.style.display =
+      'none';
+
+
+    status.textContent =
+      'Photo captured successfully.';
+
+
+    /*********************************************
+     * SEND PHOTO TO ATTENDANCE PAGE
+     *********************************************/
+
+    if (
+      window.opener &&
+      !window.opener.closed
+    ) {
+
+
+      window.opener.postMessage(
+
+        {
+
+          type:
+            'JOINTWORKS_SELFIE',
+
+          token:
+            token,
+
+          selfieData:
+            photo,
+
+          capturedTime:
+            new Date()
+              .toISOString()
+
+        },
+
+        '*'
+
+      );
+
+
+      /*******************************************
+       * CLOSE CAMERA PAGE
+       *******************************************/
+
+      setTimeout(
+        function() {
+
+          window.close();
+
+        },
+        700
+      );
+
+
+    }
+
+    else {
+
+
+      status.textContent =
+        'Photo captured. Please return to the attendance page.';
+
+    }
+
+  }
+);
+
+
+/*************************************************
+ * STOP CAMERA
+ *************************************************/
+
+function stopCamera() {
+
+
+  if (stream) {
+
+
+    stream
+      .getTracks()
+      .forEach(
+        function(track) {
+
+          track.stop();
+
+        }
+      );
+
+
+    stream =
+      null;
+
+  }
+
+
+  video.srcObject =
+    null;
+
+}
+
+
+/*************************************************
+ * START CAMERA
+ *************************************************/
+
+startCamera();
+
+
+/*************************************************
+ * STOP CAMERA WHEN PAGE CLOSES
+ *************************************************/
+
+window.addEventListener(
+  'beforeunload',
+  function() {
+
+    stopCamera();
+
+  }
+);
+
+
+</script>
+
 
 </body>
+
 </html>
